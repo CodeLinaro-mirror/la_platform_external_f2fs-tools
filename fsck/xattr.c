@@ -30,7 +30,7 @@ void *read_all_xattrs(struct f2fs_sb_info *sbi, struct f2fs_node *inode,
 			return NULL;
 	}
 
-	txattr_addr = calloc(inline_size + BLOCK_SZ, 1);
+	txattr_addr = calloc(inline_size + F2FS_BLKSIZE, 1);
 	ASSERT(txattr_addr);
 
 	if (inline_size)
@@ -44,6 +44,9 @@ void *read_all_xattrs(struct f2fs_sb_info *sbi, struct f2fs_node *inode,
 		get_node_info(sbi, xnid, &ni);
 		ret = dev_read_block(txattr_addr + inline_size, ni.blk_addr);
 		ASSERT(ret >= 0);
+		memset(txattr_addr + inline_size + F2FS_BLKSIZE -
+				sizeof(struct node_footer), 0,
+				sizeof(struct node_footer));
 	}
 
 	header = XATTR_HDR(txattr_addr);
@@ -91,6 +94,7 @@ void write_all_xattrs(struct f2fs_sb_info *sbi,
 	nid_t xnid = le32_to_cpu(inode->i.i_xattr_nid);
 	u64 inline_size = inline_xattr_size(&inode->i);
 	int ret;
+	bool xattrblk_alloced = false;
 
 	memcpy(inline_xattr_addr(&inode->i), txattr_addr, inline_size);
 
@@ -106,11 +110,12 @@ void write_all_xattrs(struct f2fs_sb_info *sbi,
 		ASSERT(dn.node_blk);
 		xattr_node = dn.node_blk;
 		inode->i.i_xattr_nid = cpu_to_le32(new_nid);
+		xattrblk_alloced = true;
 	} else {
 		set_new_dnode(&dn, inode, NULL, xnid);
 		get_node_info(sbi, xnid, &ni);
 		blkaddr = ni.blk_addr;
-		xattr_node = calloc(BLOCK_SZ, 1);
+		xattr_node = calloc(F2FS_BLKSIZE, 1);
 		ASSERT(xattr_node);
 		ret = dev_read_block(xattr_node, ni.blk_addr);
 		if (ret < 0)
@@ -122,7 +127,8 @@ void write_all_xattrs(struct f2fs_sb_info *sbi,
 	memcpy(xattr_addr, txattr_addr + inline_size,
 			F2FS_BLKSIZE - sizeof(struct node_footer));
 
-	ret = dev_write_block(xattr_node, blkaddr);
+	ret = xattrblk_alloced ? dev_write_block(xattr_node, blkaddr) :
+		update_block(sbi, xattr_node, &blkaddr, NULL);
 
 free_xattr_node:
 	free(xattr_node);
@@ -161,7 +167,7 @@ int f2fs_setxattr(struct f2fs_sb_info *sbi, nid_t ino, int index, const char *na
 	ASSERT(index == F2FS_XATTR_INDEX_SECURITY);
 
 	get_node_info(sbi, ino, &ni);
-	inode = calloc(BLOCK_SZ, 1);
+	inode = calloc(F2FS_BLKSIZE, 1);
 	ASSERT(inode);
 	ret = dev_read_block(inode, ni.blk_addr);
 	ASSERT(ret >= 0);
@@ -247,7 +253,7 @@ int f2fs_setxattr(struct f2fs_sb_info *sbi, nid_t ino, int index, const char *na
 	write_all_xattrs(sbi, inode, new_hsize, base_addr);
 
 	/* inode need update */
-	ASSERT(write_inode(inode, ni.blk_addr) >= 0);
+	ASSERT(update_inode(sbi, inode, &ni.blk_addr) >= 0);
 exit:
 	free(inode);
 	free(base_addr);

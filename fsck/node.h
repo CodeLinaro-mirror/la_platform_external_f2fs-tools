@@ -35,7 +35,7 @@ static inline unsigned int ADDRS_PER_PAGE(struct f2fs_sb_info *sbi,
 	if (!inode_blk) {
 		struct node_info ni;
 
-		inode_blk = calloc(BLOCK_SZ, 2);
+		inode_blk = calloc(F2FS_BLKSIZE, 2);
 		ASSERT(inode_blk);
 
 		get_node_info(sbi, ino, &ni);
@@ -99,6 +99,7 @@ static inline void set_new_dnode(struct dnode_of_data *dn,
 	dn->nid = nid;
 	dn->idirty = 0;
 	dn->ndirty = 0;
+	dn->alloced = 0;
 }
 
 static inline void inc_inode_blocks(struct dnode_of_data *dn)

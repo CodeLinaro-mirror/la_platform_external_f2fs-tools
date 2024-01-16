@@ -5,19 +5,16 @@
 name: "f2fs-tools"
 description: "F2FS filesystem tools"
 third_party {
-  url {
-    type: HOMEPAGE
-    value: "https://git.kernel.org/pub/scm/linux/kernel/git/jaegeuk/f2fs-tools.git/"
-  }
-  url {
-    type: GIT
-    value: "https://git.kernel.org/pub/scm/linux/kernel/git/jaegeuk/f2fs-tools.git"
-  }
-  version: "d860afaebd1e04839047d247fa5d1cfcdeaeefb6"
   license_type: RESTRICTED
   last_upgrade_date {
     year: 2023
-    month: 10
-    day: 26
+    month: 12
+    day: 14
+  }
+  homepage: "https://git.kernel.org/pub/scm/linux/kernel/git/jaegeuk/f2fs-tools.git/"
+  identifier {
+    type: "Git"
+    value: "https://git.kernel.org/pub/scm/linux/kernel/git/jaegeuk/f2fs-tools.git"
+    version: "bf5100606d63f6928799846b7322aa6f3f158bcf"
   }
 }
